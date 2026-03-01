@@ -1,0 +1,22 @@
+africastalking 
+psycopg2-binary
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy
+pydantic
+alembic
+python-dotenv
+httpx
+pytest
+databases[postgresql]
+pytest-asyncio
+langchain[google-genai]
+langchain-google-vertexai
+langchain-google-genai
+langchain-openai
+openai
+google-genai
+# Latest LangGraph (pre-release included if available)
+--pre langgraph
+colorama
+requests
