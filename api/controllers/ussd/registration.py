@@ -2,8 +2,8 @@
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from services.registration_service import ussd_register_patient_basic
-from models import PatientRegistration
+from services.ussd.register_patient import ussd_register_patient_basic
+from models.database_models import PatientRegistration
 
 def register_patient_controller(session: Session, user_input: dict) -> dict:
     """

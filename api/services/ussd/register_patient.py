@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import bcrypt
 from sqlalchemy.orm import Session
-from models import PatientRegistration
+from models.database_models import PatientRegistration
 from schemas.users import PatientRegistration as registration_schema
 from datetime import datetime
 
