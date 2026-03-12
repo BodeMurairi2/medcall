@@ -6,15 +6,9 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 class PatientRegistration(BaseModel):
     first_name: str = Field(..., description="Patient first name")
     last_name: str = Field(..., description="Patient last name")
-    phone_number: str = Field(..., description="Patient phone number, digits only, e.g., 2507XXXXXXX", min_length=10, max_length=15)
+    phone_number: str = Field(..., description="Patient phone number, digits only, e.g., +2507XXXXXXX", min_length=10, max_length=15)
     email_address: Optional[EmailStr] = Field(None, description="Patient email address")
-    pin: int = Field(..., description="Patient unique PIN for USSD authentication min_vaue is 6", min_length=6)
-    
-    @field_validator("phone_number")
-    def validate_phone_number(cls, value):
-        if not value.isdigit():
-            raise ValueError("Phone number must contain digits only")
-        return value
+    pin: str = Field(..., description="Patient unique PIN for USSD authentication min_vaue is 6", examples="000000")
 
 # Patient Personal Info Model
 class PatientPersonalInfo(BaseModel):
