@@ -33,6 +33,7 @@ class USSDPersonalInfo(str, Enum):
 class USSDMedicalInfo(str, Enum):
     """USSD For adding medical info"""
     MAIN_MENU = "MEDICAL_INFO"
+    
     VERIFY_PIN = "PIN"
     BLOOD_TYPE = "ADD_BLOOD_TYPE"
     ALLERGIES = "ADD_ALLERGIES"

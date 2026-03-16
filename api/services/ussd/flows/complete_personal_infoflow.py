@@ -15,7 +15,10 @@ def complete_personal_info_flow(session, user_input, db:Session):
     state = session["state"]
     phone_number = session["phone"]
 
-    existing_user = db.query(PatientRegistration).where(PatientRegistration.phone_number == phone_number).first()
+    existing_user = db.query(
+        PatientRegistration
+        ).where(
+            PatientRegistration.phone_number == phone_number).first()
     
     if not existing_user:
         return end("User not found. Register first before using MedCall")
@@ -90,13 +93,10 @@ def complete_personal_info_flow(session, user_input, db:Session):
             "patient_next_relationship":session["relationship"],
             "preferred_language":session["preferred_language"]
         }
-        print("\nDEBUG: patient_id =", session.get("patient_id"))
-        print("\nDEBUG: registration_details =", registration_details)
 
         try:
             personal_info_data = patient_schema(**registration_details)
         except Exception as validation_error:
-            print(f"\nDebug:\n{validation_error}")
             return end("Registration Failed. Invalid Input")
         
         try:
@@ -108,7 +108,6 @@ def complete_personal_info_flow(session, user_input, db:Session):
             db.commit()
             db.refresh(personal_info)
         except Exception as db_error:
-            print(f"\nDebug:\n{db_error}")
             return end("Registration failed. Please try again later")
 
         return end(f"Personal Information save successfuly\nPatient Name: {existing_user.first_name} {existing_user.last_name}")
