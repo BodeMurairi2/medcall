@@ -2,7 +2,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes.ussd.registration import router as registration_router
+from routes.ussd.ussd_routers import router as registration_router
 from database.session import get_db
 
 app = FastAPI(title="MedCall APIs",
