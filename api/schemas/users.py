@@ -13,14 +13,14 @@ class PatientRegistration(BaseModel):
 # Patient Personal Info Model
 class PatientPersonalInfo(BaseModel):
     age: int = Field(..., description="Patient age")
-    gender: str = Field(..., description="Patient gender: M, F, or Other")
+    gender: str = Field(..., description="Patient gender: M, F, or OTHER")
     nationality: str = Field(..., description="Patient nationality")
     country_of_residence: str = Field(..., description="Country of residence")
     city_of_residence: str = Field(..., description="City of residence")
     address: str = Field(..., description="Patient address")
     next_of_kin: Optional[str] = Field(None, description="Patient next of kin name")
     next_of_kin_phone_number: Optional[str] = Field(None, description="Next of kin phone number")
-    relationship: Optional[str] = Field(None, description="Relationship with next of kin")
+    patient_next_relationship: Optional[str] = Field(None, description="Relationship with next of kin")
     preferred_language: str = Field(..., description="Preferred language for communication")
 
     @field_validator("next_of_kin_phone_number")

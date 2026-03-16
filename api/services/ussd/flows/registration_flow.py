@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import bcrypt
+from datetime import datetime
 from sqlalchemy.orm import Session
 from models.database_models import PatientRegistration
 from schemas.users import PatientRegistration as registration_schema
@@ -49,18 +50,21 @@ def registration_flow(session, user_input, db: Session):
             "phone_number": phone_number,
             "pin": hashed_pin.decode()
         }
+        
         try:
             patient_data = registration_schema(**registration_data)
         except Exception as validation_error:
-            return end("Registration failed: invalid input.")
-
+            print(f"\nfailed to register:\n{validation_error}")
+            end("Registration failed. Invalid input")
         try:
-            new_patient = PatientRegistration(**registration_data)
+            new_patient = PatientRegistration(**patient_data.model_dump(mode="json"), updated_at=datetime.utc.now)
             db.add(new_patient)
             db.commit()
             db.refresh(new_patient)
         except Exception as db_error:
-            return end("Registration failed. Please try again later")
+            print(f"\nValue error:\n {db_error}")
+            print("DEBUG: Registration failed:", db_error)
+            end("Registration failed. Try later")
 
         return end(
             "Registration successful. Welcome to MedCall\nRegistration Details:\n"
