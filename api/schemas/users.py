@@ -40,8 +40,8 @@ class PatientPersonalInfo(BaseModel):
 class PatientMedicalInformation(BaseModel):
     blood_type: str = Field(..., description="Patient blood type, e.g., A+, O-")
     allergies: Optional[str] = Field(None, description="Patient allergies")
-    chronic_illnesses: Optional[str] = Field(None, description="Any chronic illnesses")
-    recent_vaccinations: Optional[str] = Field(None, description="Recent vaccinations")
+    chronic_illness: Optional[str] = Field(None, description="Any chronic illnesses")
+    recent_vaccination: Optional[str] = Field(None, description="Recent vaccinations")
 
     @field_validator("blood_type")
     def validate_blood_type(cls, value):
