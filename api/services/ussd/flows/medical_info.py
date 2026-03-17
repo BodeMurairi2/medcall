@@ -3,12 +3,17 @@
 import bcrypt
 from sqlalchemy.orm import Session
 from datetime import datetime
+
 from models.database_models import PatientRegistration, PatientMedicalInfo
+
 from schemas.users import PatientMedicalInformation as medical_info_schema
-from database.session import get_db
+
 from services.ussd.response import con, end
 from services.ussd.state import USSDMedicalInfo
+
 from utils.blood_type import blood_type
+from utils.orm_to_dict import dict_medical_info
+from utils.helpers import search_user, search_patient_data
 
 def save_medical_info(session, user_input, db:Session):
     """Save medical information"""
@@ -16,13 +21,8 @@ def save_medical_info(session, user_input, db:Session):
     state = session["state"]
     phone_number = session["phone"]
 
-    existing_user = db.query(
-        PatientRegistration).where(
-            PatientRegistration.phone_number == phone_number).first()
-    
-    if not existing_user:
-        return end("User not found. Register first before using MedCall")
-    
+    existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
+
     if state == USSDMedicalInfo.VERIFY_PIN:
         session["pin"] = user_input
         session["patient_id"] = existing_user.id
@@ -77,3 +77,36 @@ def save_medical_info(session, user_input, db:Session):
             return end("An error happened! Try again!")
         
         return end(f"Medical data registered for patient {existing_user.first_name} {existing_user.last_name}")
+
+def view_medical_info(session, user_input, db:Session):
+    """view medical information
+    """
+    user_input = user_input.strip()
+    state = session["state"]
+    phone_number = session["phone"]
+
+    existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
+    
+    if state == USSDMedicalInfo.VERIFY_PIN:
+        session["pin"] = user_input
+        session["patient_id"] = existing_user.id
+        
+        if not bcrypt.checkpw(
+            session["pin"].encode("utf-8"),
+            existing_user.pin.encode("utf-8")
+        ):
+            return end("PIN is incorrect. Try again!")
+
+        medical_info = search_patient_data(db=db,
+                                           model=PatientMedicalInfo,
+                                           patient_id=session["patient_id"]
+                                           ).first()
+
+        patient_data = dict_medical_info(model=medical_info)
+
+        data = f"\nBlood Type: {patient_data["blood_type"]}\n" \
+               f"\nAllergies: {patient_data["allergies"]}\n" \
+               f"\nChronic Illness: {patient_data["chronic_illness"]}\n" \
+               f"\nVaccination: {patient_data["recent_vaccination"]}\n"
+        
+        return end(f"Patient medical details:\n{data}")

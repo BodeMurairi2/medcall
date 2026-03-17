@@ -41,3 +41,15 @@ class USSDMedicalInfo(str, Enum):
     RECENT_VACCINATION = "RECENT_VACCINATIONS"
 
     END = "END"
+
+class ViewInfo(str, Enum):
+    MAIN_MENU = "VIEW_INFO"
+    
+    VERIFY_PIN = "PIN"
+    MEDICAL_INFO = "MEDICAL_INFO"
+
+class ViewPersonalInfo(str, Enum):
+    MAIN_MENU = "VIEW_INFO"
+
+    VERIFY_PIN = "PIN"
+    PERSONAL_INFO = "PERSONAL_INFO"
