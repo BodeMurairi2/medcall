@@ -53,3 +53,7 @@ class ViewPersonalInfo(str, Enum):
 
     VERIFY_PIN = "PIN"
     PERSONAL_INFO = "PERSONAL_INFO"
+
+class ViewConsultation(str, Enum):
+    MAIN_MENU = "CONSULTATION"
+    VERIFY_PIN = "PIN"

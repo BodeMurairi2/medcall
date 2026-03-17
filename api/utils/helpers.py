@@ -19,5 +19,12 @@ def search_patient_data(db:Session, model, patient_id):
     """Search patient information"""
     patient_data = db.query(model).where(model.patient_id == patient_id)
     if not patient_data:
-        return end("No Data available")
+        return None
+    return patient_data
+
+def search_list_patient_data(db:Session, model, patient_id):
+    """Search patient information"""
+    patient_data = db.query(model).where(model.patient_id == patient_id).all()
+    if not patient_data:
+        return 
     return patient_data

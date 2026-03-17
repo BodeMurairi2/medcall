@@ -6,13 +6,15 @@ from services.ussd.state import (USSDState,
                                  USSDMedicalInfo,
                                  USSDPersonalInfo,
                                  ViewInfo,
-                                 ViewPersonalInfo
+                                 ViewPersonalInfo,
+                                 ViewConsultation
                                  )
 
 from services.ussd.flows.menu_flow import main_menu
 from services.ussd.flows.registration_flow import registration_flow
 from services.ussd.flows.medical_info import save_medical_info, view_medical_info
 from services.ussd.flows.complete_personal_infoflow import complete_personal_info_flow, view_personal_info
+from services.ussd.flows.view_conversation import view_consultation
 
 from services.ussd.response import end
 
@@ -62,7 +64,8 @@ def ussd_engine(session_id, text, phone_number, db: Session):
             session["state"] = ViewPersonalInfo.VERIFY_PIN
             response = "CON Enter your PIN"
         elif text == "6":
-            response = end("View consultation information coming up soon...")
+            session["state"] = ViewConsultation.VERIFY_PIN
+            response = "CON Enter your PIN"
         elif text == "7":
             response = end("Subscription coming up soon...")
         elif text == "8":
@@ -87,6 +90,8 @@ def ussd_engine(session_id, text, phone_number, db: Session):
         response = view_medical_info(session, user_input, db=db)
     elif isinstance(state, ViewPersonalInfo):
         response = view_personal_info(session, user_input, db=db)
+    elif isinstance(state, ViewConsultation):
+        response = view_consultation(session, user_input, db=db)
     else:
         response = end("Invalid input")
 

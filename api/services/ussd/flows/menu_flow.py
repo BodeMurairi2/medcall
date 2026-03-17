@@ -14,7 +14,7 @@ def main_menu(session):
         "3. Register Your Medical Information\n"
         "4. View Your Medical Information\n"
         "5. View Your Personal Information\n"
-        "6. View Conversation History\n"
+        "6. View Consultations History\n"
         "7. Subscription\n"       
         "8. Quit"
     )
