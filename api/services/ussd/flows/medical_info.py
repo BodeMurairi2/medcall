@@ -87,6 +87,9 @@ def view_medical_info(session, user_input, db:Session):
 
     existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
     
+    if not existing_user:
+        return end("User is not found! Register first to access this page")
+
     if state == USSDMedicalInfo.VERIFY_PIN:
         session["pin"] = user_input
         session["patient_id"] = existing_user.id

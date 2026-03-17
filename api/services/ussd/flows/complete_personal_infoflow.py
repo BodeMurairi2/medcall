@@ -121,6 +121,9 @@ def view_personal_info(session, user_input, db:Session):
     phone_number = session["phone"]
 
     existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
+    
+    if not existing_user:
+        return end("User not found! Register to MedCall to access this page")
 
     if state == USSDPersonalInfo.VERIFY_PIN:
         session["pin"] = user_input
