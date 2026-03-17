@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
+
 import bcrypt
 from sqlalchemy.orm import Session
 from datetime import datetime
+
 from models.database_models import PatientRegistration, PatientPersonalInfo
+
 from schemas.users import PatientPersonalInfo as patient_schema
+
 from database.session import get_db
+
 from services.ussd.response import con, end
 from services.ussd.state import USSDPersonalInfo
+
+from utils.orm_to_dict import dict_personal_info
+from utils.helpers import search_user, search_patient_data
 
 def complete_personal_info_flow(session, user_input, db:Session):
     """Complete Personal Info"""
@@ -15,13 +23,7 @@ def complete_personal_info_flow(session, user_input, db:Session):
     state = session["state"]
     phone_number = session["phone"]
 
-    existing_user = db.query(
-        PatientRegistration
-        ).where(
-            PatientRegistration.phone_number == phone_number).first()
-    
-    if not existing_user:
-        return end("User not found. Register first before using MedCall")
+    existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
     
     if state == USSDPersonalInfo.VERIFY_PIN:
         session["pin"] = user_input
@@ -111,3 +113,40 @@ def complete_personal_info_flow(session, user_input, db:Session):
             return end("Registration failed. Please try again later")
 
         return end(f"Personal Information save successfuly\nPatient Name: {existing_user.first_name} {existing_user.last_name}")
+
+def view_personal_info(session, user_input, db:Session):
+    """View Personal Info"""
+    user_input = user_input.strip()
+    state = session["state"]
+    phone_number = session["phone"]
+
+    existing_user = search_user(db=db, phone_number=phone_number, model=PatientRegistration)
+
+    if state == USSDPersonalInfo.VERIFY_PIN:
+        session["pin"] = user_input
+        session["patient_id"] = existing_user.id
+        if not bcrypt.checkpw(
+            session["pin"].encode("utf-8"),
+            existing_user.pin.encode("utf-8")
+            ):
+            return end("Incorrect PIN. Try again later")
+        
+        personal_data = search_patient_data(
+            db=db,
+            model=PatientPersonalInfo,
+            patient_id=session["patient_id"]
+        ).first()
+
+        patient_data = dict_personal_info(model=personal_data)
+
+        data = f"Age: {patient_data["age"]}\n" \
+               f"Gender: {patient_data["gender"]}\n" \
+               f"Nationality: {patient_data["nationality"]}\n" \
+               f"Country of Residence: {patient_data["country_of_residence"]}\n" \
+               f"City of Residence: {patient_data["city_of_residence"]}\n" \
+               f"Address: {patient_data["address"]}\n" \
+               f"Next of Kin: {patient_data["next_of_kin"]}\n" \
+               f"Next of Kin Phone Number: {patient_data["next_of_kin_phone_number"]}\n" \
+               f"Next of Kin Relationship: {patient_data["patient_next_relationship"]}\n" \
+               f"Preferred Language: {patient_data["preferred_language"]}\n"
+        return end(f"Patient data\n:{data}")
