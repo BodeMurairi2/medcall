@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy import JSON
 from database.base import Base
 
 def generate_patient_code():
@@ -90,13 +91,21 @@ class Consultation(Base):
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     consultation_id = Column(String, default=lambda: f"consul-{generate_patient_code()}", unique=True)
     start_time = Column(DateTime, default=datetime.utcnow)
-    risk_level = Column(String, nullable=True)
+    risk_level = Column(JSON, nullable=True)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     consultation_summary = Column(Text, nullable=True)
     consultation_status = Column(Boolean, default=True, nullable=False)
-
+    thread_id = Column(String, nullable=True)
     patient = relationship("PatientRegistration", back_populates="consultations")
-    consultation_sms = relationship("ConsultationSMS", back_populates="consultation", cascade="all, delete-orphan")
-    referrals = relationship("Referral", back_populates="consultation", cascade="all, delete-orphan")
+    consultation_sms = relationship("ConsultationSMS",
+                                    back_populates="consultation",
+                                    cascade="all, delete-orphan",
+                                    order_by="ConsultationSMS.timestamp"
+                                    )
+    referrals = relationship("Referral",
+                             back_populates="consultation",
+                             cascade="all, delete-orphan"
+                             )
 
 # Consultation SMS
 class ConsultationSMS(Base):
@@ -105,12 +114,14 @@ class ConsultationSMS(Base):
     id = Column(Integer, primary_key=True)
     consultation_id = Column(Integer, ForeignKey("consultations.id"), nullable=False)
     sms_id = Column(String, default=lambda: generate_patient_code(), nullable=False)
-    system_message = Column(Text, nullable=False)
-    human_message = Column(Text, nullable=False)
-    ai_message = Column(Text, nullable=True)
+    message_type = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    sms_metadata = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
-
-    consultation = relationship("Consultation", back_populates="consultation_sms")
+    
+    consultation = relationship("Consultation",
+                                back_populates="consultation_sms"
+                                )
 
 # Referral
 class Referral(Base):

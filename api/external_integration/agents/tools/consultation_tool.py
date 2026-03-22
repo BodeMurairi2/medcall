@@ -5,20 +5,8 @@ from models.database_models import PatientRegistration, PatientMedicalInfo, Pati
 from database.session import get_db
 
 from langchain.tools import tool
-
-def to_dict(obj):
-    """
-    convert database object to normal dict
-    args:
-        obj: db oject
-        return dict
-    """
-    if not obj:
-        return None
-    data = obj.__dict__.copy()
-    data.pop("_sa_instance_state", None)
-    return data
-
+from external_integration.agents.utils.convert_to_dict import to_dict
+from external_integration.agents.utils.normalize_phone import normalize_phone_number
 
 @tool
 def verify_registration(phone_number:str):
@@ -29,8 +17,9 @@ def verify_registration(phone_number:str):
         db:Session the sqlalchemy session
         return True if user registered or False if user not registered
     """
+    normalized_number = normalize_phone_number(phone_number=phone_number)
     db:Session = next(get_db())
-    patient = db.query(PatientRegistration).where(PatientRegistration.phone_number == phone_number).first()
+    patient = db.query(PatientRegistration).where(PatientRegistration.phone_number == normalized_number).first()
     return {"registered": bool(patient)}
 
 @tool
@@ -42,11 +31,12 @@ def collect_user_personal_info(phone_number:str):
         db:Session: Sqlalchemy session
         return [personal information] or None if unavailable
     """
+    normalized_number = normalize_phone_number(phone_number=phone_number)
     db:Session = next(get_db())
     patient = db.query(
         PatientRegistration
         ).where(
-            PatientRegistration.phone_number == phone_number
+            PatientRegistration.phone_number == normalized_number
             ).first()
     if not patient:
         return None
@@ -66,11 +56,12 @@ def collect_medical_information(phone_number:str):
         db:Session: Sqlalchemy session
         return [personal information] or None if unavailable
     """
+    normalized_number = normalize_phone_number(phone_number=phone_number)
     db:Session = next(get_db())
     patient = db.query(
         PatientRegistration
         ).where(
-            PatientRegistration.phone_number == phone_number
+            PatientRegistration.phone_number == normalized_number
             ).first()
     if not patient:
         return None

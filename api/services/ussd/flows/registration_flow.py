@@ -16,17 +16,17 @@ def registration_flow(session, user_input, db: Session):
     phone_number = session["phone"]
 
     if state == USSDState.REGISTER_FIRST_NAME:
-        session["first_name"] = user_input
+        session["first_name"] = user_input.upper()
         session["state"] = USSDState.REGISTER_LAST_NAME
         return con("Enter your last name")
 
     if state == USSDState.REGISTER_LAST_NAME:
-        session["last_name"] = user_input
+        session["last_name"] = user_input.upper()
         session["state"] = USSDState.REGISTER_EMAIL
         return con("Enter your email (or 'none')")
 
     if state == USSDState.REGISTER_EMAIL:
-        session["email"] = None if user_input.lower() == "none" else user_input
+        session["email"] = user_input.upper() if user_input else None
         session["state"] = USSDState.REGISTER_PIN
         return con("Enter your PIN")
 
@@ -57,7 +57,7 @@ def registration_flow(session, user_input, db: Session):
             print(f"\nfailed to register:\n{validation_error}")
             end("Registration failed. Invalid input")
         try:
-            new_patient = PatientRegistration(**patient_data.model_dump(mode="json"), updated_at=datetime.utc.now)
+            new_patient = PatientRegistration(**patient_data.model_dump(mode="json"), updated_at=datetime.utcnow())
             db.add(new_patient)
             db.commit()
             db.refresh(new_patient)

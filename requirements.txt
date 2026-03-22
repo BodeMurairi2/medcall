@@ -21,3 +21,4 @@ google-genai
 colorama
 requests
 bcrypt
+phonenumbers
