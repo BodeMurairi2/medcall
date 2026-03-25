@@ -6,7 +6,7 @@ def test_consultation():
     url = "http://localhost:8000/consultation"
     payload = {
         "phone_number": "+250795020998",
-        "message": "J'ai du mal a me tenir debout et je ressens de vertige",
+        "message": "no i don't",
         "thread_id": "7fee659a"
         }
     response = requests.post(url=url, json=payload)

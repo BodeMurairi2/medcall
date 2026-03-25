@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import uuid
+import json
 from datetime import datetime
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.sqlite import TEXT
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy import JSON
 from database.base import Base
@@ -106,6 +108,12 @@ class Consultation(Base):
                              back_populates="consultation",
                              cascade="all, delete-orphan"
                              )
+    analysis = relationship(
+        "ConsultationAnalysis",
+        back_populates="consultation",
+        cascade="all, delete-orphan",
+        uselist=False
+        )
 
 # Consultation SMS
 class ConsultationSMS(Base):
@@ -122,6 +130,44 @@ class ConsultationSMS(Base):
     consultation = relationship("Consultation",
                                 back_populates="consultation_sms"
                                 )
+
+
+class ConsultationAnalysis(Base):
+    __tablename__ = "consultation_analysis"
+
+    id = Column(String, primary_key=True, default=lambda: f"analysis-{generate_patient_code()}")
+    consultation_id = Column(Integer, ForeignKey("consultations.id", ondelete="CASCADE"), nullable=False)
+
+    detected_symptoms = Column(TEXT, nullable=False)
+    possible_conditions = Column(TEXT, nullable=False)
+    exams = Column(TEXT, nullable=False)
+
+    risk_level = Column(String, nullable=False)
+    mark_emergency = Column(Boolean, default=False)
+    reasoning = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    consultation = relationship("Consultation", back_populates="analysis")
+
+    def set_detected_symptoms(self, data):
+        self.detected_symptoms = json.dumps(data)
+
+    def get_detected_symptoms(self):
+        return json.loads(self.detected_symptoms or "[]")
+
+    def set_possible_conditions(self, data):
+        self.possible_conditions = json.dumps(data)
+
+    def get_possible_conditions(self):
+        return json.loads(self.possible_conditions or "[]")
+
+    def set_exams(self, data):
+        self.exams = json.dumps(data)
+
+    def get_exams(self):
+        return json.loads(self.exams or "{}")
 
 # Referral
 class Referral(Base):
