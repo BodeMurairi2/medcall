@@ -4,16 +4,20 @@ import json
 from threading import Thread
 from langchain_core.messages import HumanMessage
 
-from services.consultation.clean_consultation_data import parse_json, sanitize_nan
+from services.consultation.clean_consultation_data import parse_json, sanitize_nan, safe_json_dumps
 from services.consultation.save_consultation import save_consultation
 from services.consultation.save_sms import save_consultation_sms
 
 from external_integration.agents.agent.consultation import consultation_agent
 from external_integration.agents.agent.analysis import analytic_agent
+from external_integration.agents.agent.decision import decision_agent
 from external_integration.agents.utils.normalize_phone import normalize_phone_number
 
 from sqlalchemy.orm import Session
-from models.database_models import Consultation, ConsultationSMS, ConsultationAnalysis, PatientRegistration
+from models.database_models import (
+    Consultation, ConsultationSMS, ConsultationAnalysis,
+    ConsultationDecision, PatientRegistration, PatientPersonalInfo
+)
 from database.create_session import SessionLocal
 
 
@@ -50,7 +54,6 @@ def trigger_analysis(consultation_id: int, patient_int_id: int, collected_data: 
             print(f"[ERROR] Consultation {consultation_id} not found in analysis thread")
             return
 
-        # Get the string patient_id (e.g. "Patient-abc123") for the tool
         patient = db.query(PatientRegistration).filter(PatientRegistration.id == patient_int_id).first()
         string_patient_id = patient.patient_id if patient else str(patient_int_id)
 
@@ -72,31 +75,100 @@ def trigger_analysis(consultation_id: int, patient_int_id: int, collected_data: 
         }
 
         analysis_response = agent_instance.invoke(
-            {"messages": [HumanMessage(content=json.dumps(sanitize_nan(analysis_input)))]},
+            {"messages": [HumanMessage(content=safe_json_dumps(analysis_input))]},
             config={"configurable": {"thread_id": str(consultation_id)}}
         )
 
         raw_analysis = analysis_response["messages"][-1].content
+        print(f"[DEBUG] Raw analysis content type={type(raw_analysis).__name__} | preview={str(raw_analysis)[:300]}")
         analysis_json = parse_json(raw_content=raw_analysis)
 
-        if isinstance(analysis_json, dict) and analysis_json:
-            analysis_record = ConsultationAnalysis(
-                consultation_id=consultation_id,
-                detected_symptoms=json.dumps(analysis_json.get("detected_symptoms", [])),
-                possible_conditions=json.dumps(analysis_json.get("possible_conditions", [])),
-                exams=json.dumps(analysis_json.get("exams", {})),
-                risk_level=analysis_json.get("risk_level", "low"),
-                mark_emergency=analysis_json.get("mark_emergency", False),
-                reasoning=analysis_json.get("reasoning", "")
-            )
-            db.add(analysis_record)
-            db.commit()
-            print(f"[INFO] Analysis saved for consultation {consultation_id}")
-        else:
+        if not isinstance(analysis_json, dict) or not analysis_json:
             print(f"[WARN] Analysis returned empty or invalid JSON for consultation {consultation_id}")
+            return
+
+        analysis_record = ConsultationAnalysis(
+            consultation_id=consultation_id,
+            detected_symptoms=json.dumps(analysis_json.get("detected_symptoms", [])),
+            possible_conditions=json.dumps(analysis_json.get("possible_conditions", [])),
+            exams=json.dumps(analysis_json.get("exams", {})),
+            risk_level=analysis_json.get("risk_level", "low"),
+            mark_emergency=analysis_json.get("mark_emergency", False),
+            reasoning=analysis_json.get("reasoning", "")
+        )
+        db.add(analysis_record)
+        # Also update the consultation's risk_level with the authoritative analysis result
+        consultation.risk_level = analysis_json.get("risk_level", consultation.risk_level)
+        db.commit()
+        print(f"[INFO] Analysis saved for consultation {consultation_id}")
+        print(f"[ANALYSIS] risk={analysis_json.get('risk_level')} | emergency={analysis_json.get('mark_emergency')} | conditions={analysis_json.get('possible_conditions')}")
+        # Chain into decision agent (uses its own session)
+        trigger_decision(
+            consultation_id=consultation_id,
+            patient_int_id=patient_int_id,
+            analysis_data=analysis_json,
+        )
 
     except Exception as e:
         print(f"[ERROR] Analysis failed for consultation {consultation_id}: {e}")
+    finally:
+        db.close()
+
+
+def trigger_decision(consultation_id: int, patient_int_id: int, analysis_data: dict):
+    """
+    Runs the decision agent after analysis is saved.
+    Opens its own db session so it is fully isolated from the analysis session.
+    Saves the final recommendation to ConsultationDecision.
+    """
+    db = SessionLocal()
+    try:
+        personal_info = db.query(PatientPersonalInfo).filter(
+            PatientPersonalInfo.patient_id == patient_int_id
+        ).first()
+
+        decision_input = {
+            "consultation_id": str(consultation_id),
+            "analysis": analysis_data,
+            "patient_location": {
+                "country": personal_info.country_of_residence if personal_info else None,
+                "city": personal_info.city_of_residence if personal_info else None,
+                "address": personal_info.address if personal_info else None,
+            }
+        }
+
+        agent_instance, _ = decision_agent(thread_id=f"decision-{consultation_id}")
+
+        decision_response = agent_instance.invoke(
+            {"messages": [HumanMessage(content=safe_json_dumps(decision_input))]},
+            config={"configurable": {"thread_id": f"decision-{consultation_id}"}}
+        )
+
+        raw_decision = decision_response["messages"][-1].content
+        print(f"[DEBUG] Raw decision content type={type(raw_decision).__name__} | preview={str(raw_decision)[:300]}")
+        decision_json = parse_json(raw_content=raw_decision)
+
+        if not isinstance(decision_json, dict) or not decision_json:
+            print(f"[WARN] Decision returned empty or invalid JSON for consultation {consultation_id}")
+            return
+
+        decision_record = ConsultationDecision(
+            consultation_id=consultation_id,
+            message=decision_json.get("message", ""),
+            urgency=decision_json.get("urgency", "low"),
+            action=decision_json.get("action", "self_care"),
+            referral_type=decision_json.get("referral_type"),
+        )
+        db.add(decision_record)
+        db.commit()
+        print(f"[INFO] Decision saved for consultation {consultation_id}")
+        print(f"[DECISION] urgency={decision_json.get('urgency')} | action={decision_json.get('action')}")
+        print(f"[DECISION] message={decision_json.get('message')}")
+        print(f"[DECISION] referral={decision_json.get('referral_type')}")
+
+    except Exception as e:
+        print(f"[ERROR] Decision failed for consultation {consultation_id}: {e}")
+        db.rollback()
     finally:
         db.close()
 
@@ -156,7 +228,12 @@ def handle_consultation(db: Session, phone_number: str, user_input: str, thread_
 
     collected_data = consultation_data.get("collected_data", {})
     severity = collected_data.get("severity", {})
-    risk_level = ",".join(severity.values()) if severity else None
+    if severity:
+        _priority = {"severe": 2, "moderate": 1, "mild": 0}
+        _highest = max(severity.values(), key=lambda v: _priority.get(str(v).lower(), -1))
+        risk_level = "high" if str(_highest).lower() == "severe" else ("moderate" if str(_highest).lower() == "moderate" else "low")
+    else:
+        risk_level = None
 
     consultation_summary = (
         consultation_data.get("consultation_summary")
@@ -215,6 +292,7 @@ def handle_consultation(db: Session, phone_number: str, user_input: str, thread_
 
     # Trigger background analysis when consultation is complete
     if not is_active:
+        print(f"[INFO] Consultation {active_consultation.id} complete — starting analysis in background")
         Thread(
             target=trigger_analysis,
             args=(active_consultation.id, patient_id, collected_data),

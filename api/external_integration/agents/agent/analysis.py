@@ -84,9 +84,6 @@ tools = [
     load_health_dataset
 ]
 
-# Pre-compiled once at startup — thread isolation is handled via thread_id
-# in the config passed at invoke time, so a single shared agent + checkpointer
-# is correct and safe.
 _shared_memory = InMemorySaver()
 
 _analytic_agent = create_agent(

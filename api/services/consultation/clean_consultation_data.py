@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+import re
 import math
 import json
 from typing import Union, Dict, List, Any
+
+# Matches bare NaN / Infinity / -Infinity tokens that are NOT inside a JSON string
+_NAN_RE = re.compile(r'(?<!["\w\-])(-?(?:NaN|Infinity))(?!["\w])')
 
 
 def parse_json(raw_content: Union[str, list]) -> Union[Dict, List]:
@@ -30,6 +34,18 @@ def parse_json(raw_content: Union[str, list]) -> Union[Dict, List]:
     except json.JSONDecodeError as e:
         print(f"[ERROR] Failed to parse JSON: {e}\nRaw content (first 300 chars): {cleaned[:300]}")
         return {}
+
+
+def safe_json_dumps(data: Any) -> str:
+    """
+    Serialize *data* to a JSON string that is safe for strict parsers (e.g. Gemini).
+    Two-pass approach:
+      1. sanitize_nan() – replace float NaN/Infinity Python objects with None
+      2. regex – replace any remaining bare NaN/Infinity tokens in the output string
+    """
+    cleaned = sanitize_nan(data)
+    raw = json.dumps(cleaned)
+    return _NAN_RE.sub("null", raw)
 
 
 def sanitize_nan(obj: Any) -> Any:
