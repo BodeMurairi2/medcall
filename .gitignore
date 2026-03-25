@@ -26,3 +26,5 @@ build/
 .coverage.*
 htmlcov/
 .tox/
+alembic.ini
+.ipynb_checkpoints/
