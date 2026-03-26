@@ -11,9 +11,9 @@ _NAN_RE = re.compile(r'(?<!["\w\-])(-?(?:NaN|Infinity))(?!["\w])')
 
 def parse_json(raw_content: Union[str, list]) -> Union[Dict, List]:
     """
-    Parses a raw LLM response into a Python dict or list.
-    Handles both plain strings and list content-block responses
-    (e.g. [{"type": "text", "text": "..."}]) returned by the new
+    This function parses a raw LLM response into a Python dict or list.
+    It handles both plain strings and list content-block responses
+    like [{"type": "text", "text": "..."}]) returned by the new
     langchain.agents create_agent / Gemini API.
     Strips markdown code fences if present.
     """
@@ -38,7 +38,7 @@ def parse_json(raw_content: Union[str, list]) -> Union[Dict, List]:
 
 def safe_json_dumps(data: Any) -> str:
     """
-    Serialize *data* to a JSON string that is safe for strict parsers (e.g. Gemini).
+    This function serialize *data* to a JSON string that is safe for strict parsers like Gemini.
     Two-pass approach:
       1. sanitize_nan() – replace float NaN/Infinity Python objects with None
       2. regex – replace any remaining bare NaN/Infinity tokens in the output string
@@ -50,10 +50,8 @@ def safe_json_dumps(data: Any) -> str:
 
 def sanitize_nan(obj: Any) -> Any:
     """
-    Recursively replace float NaN / Infinity values with None so the data
-    can be safely serialized to strict JSON (e.g. for the Gemini API).
-    Python's json.loads silently accepts NaN tokens from LLM output, but
-    json.dumps re-emits them as 'NaN' which external APIs reject.
+    This function recursively replace float NaN / Infinity values with None so the data
+    can be safely serialized to strict JSON for Gemini API.
     """
     if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
         return None

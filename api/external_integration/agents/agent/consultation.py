@@ -20,6 +20,13 @@ load_dotenv()
 
 consultation_llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_AI_MODEL"),
+    api_key=os.getenv("GEMINI_API_KEY_G"),
+    temperature=0.1,
+    max_tokens=8000
+)
+
+consultation_llm_fallback_8 = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_AI_MODEL"),
     api_key=os.getenv("GEMINI_API_KEY_A"),
     temperature=0.1,
     max_tokens=8000
@@ -98,6 +105,7 @@ def consultation_agent():
                 consultation_llm_fallback_2,
                 consultation_llm_fallback_3,
                 consultation_llm_fallback_4,
+                consultation_llm_fallback_8
             )
         ],
         response_format=None,

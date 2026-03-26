@@ -35,7 +35,7 @@ def _load_clinic_data(country_key: str) -> str:
 @tool
 def load_clinics_by_country(country: str) -> str:
     """
-    Load all healthcare facilities, hospitals, clinics, pharmacies, and specialists
+    This tool loads all healthcare facilities, hospitals, clinics, pharmacies, and specialists
     for a given East African or North African country.
     Use this to find referral facilities near the patient's location.
     Supported countries: Rwanda, Kenya, Uganda, Tanzania, Ethiopia, Egypt, Sudan, South Sudan.
@@ -52,7 +52,7 @@ def load_clinics_by_country(country: str) -> str:
 @tool
 def load_all_clinics() -> str:
     """
-    Load healthcare facilities for ALL supported countries at once.
+    This tooLoad healthcare facilities for ALL supported countries at once.
     Use this when the patient's country is unknown or when a broad search is needed.
     Covers: Rwanda, Kenya, Uganda, Tanzania, Ethiopia, Egypt, Sudan, South Sudan.
 

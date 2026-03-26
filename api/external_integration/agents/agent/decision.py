@@ -24,6 +24,13 @@ load_dotenv()
 
 decision_llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_AI_MODEL"),
+    api_key=os.getenv("GEMINI_API_KEY_G"),
+    temperature=0,
+    max_tokens=8000
+)
+
+decision_llm_fallback_8 = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_AI_MODEL"),
     api_key=os.getenv("GEMINI_API_KEY_A"),
     temperature=0,
     max_tokens=8000
