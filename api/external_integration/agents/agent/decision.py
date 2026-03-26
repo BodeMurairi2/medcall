@@ -85,6 +85,13 @@ decision_llm_fallback_7 = ChatGoogleGenerativeAI(
     max_tokens=8000
 )
 
+decision_llm_fallback_9 = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_AI_MODEL"),
+    api_key=os.getenv("GEMINI_API_KEY_H"),
+    temperature=0,
+    max_tokens=8000
+)
+
 tools = [
     web_search,
     load_clinics_by_country,
@@ -109,6 +116,7 @@ _decision_agent = create_agent(
             decision_llm_fallback_2,
             decision_llm_fallback_3,
             decision_llm_fallback_4,
+            decision_llm_fallback_9
         )
     ],
     response_format=None,

@@ -81,6 +81,13 @@ consultation_llm_fallback_7 = ChatGoogleGenerativeAI(
     max_tokens=8000
 )
 
+consultation_llm_fallback_9 = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_AI_MODEL"),
+    api_key=os.getenv("GEMINI_API_KEY_H"),
+    temperature=0.1,
+    max_tokens=8000
+)
+
 memory_thread = {
     "memory_id": str(uuid.uuid4()).split("-")[0],
     "memory": InMemorySaver()
@@ -105,7 +112,8 @@ def consultation_agent():
                 consultation_llm_fallback_2,
                 consultation_llm_fallback_3,
                 consultation_llm_fallback_4,
-                consultation_llm_fallback_8
+                consultation_llm_fallback_8,
+                consultation_llm_fallback_9
             )
         ],
         response_format=None,
