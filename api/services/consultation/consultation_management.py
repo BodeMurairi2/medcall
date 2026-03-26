@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import json
+import time
+import threading
 from threading import Thread
 from langchain_core.messages import HumanMessage
 
@@ -19,6 +21,10 @@ from database.create_session import SessionLocal
 
 agent = consultation_agent()
 analysis_agent_class = analytic_agent
+
+# Limit concurrent analysis threads so they don't all fire simultaneously
+# and exhaust every API key's quota at once
+_analysis_semaphore = threading.Semaphore(2)
 
 
 def get_active_consultation(db: Session, patient_id: int):
@@ -63,68 +69,92 @@ def _retry_pending_analysis(patient_id: int):
 def trigger_analysis(consultation_id: int, patient_int_id: int, collected_data: dict):
     """
     Runs the analytic_agent in a separate thread with its own db session.
+    Acquires a semaphore so at most 2 analyses run concurrently, preventing
+    simultaneous quota exhaustion across all API keys.
     Args:
         consultation_id: integer PK of the consultation
         patient_int_id: integer PK of the patient (patients.id)
         collected_data: symptoms/severity data from the consultation
     """
-    db = SessionLocal()  # New session — safe to use in a background thread
-    try:
-        consultation = db.query(Consultation).filter(Consultation.id == consultation_id).first()
-        if not consultation:
-            print(f"[ERROR] Consultation {consultation_id} not found in analysis thread")
-            return
+    with _analysis_semaphore:
+        _run_analysis(consultation_id, patient_int_id, collected_data)
 
-        # Get the string patient_id (e.g. "Patient-abc123") for the tool
-        patient = db.query(PatientRegistration).filter(PatientRegistration.id == patient_int_id).first()
-        string_patient_id = patient.patient_id if patient else str(patient_int_id)
 
-        # analytic_agent returns (agent, thread_id) — unpack correctly
-        agent_instance, _ = analysis_agent_class(thread_id=str(consultation_id))
+def _run_analysis(consultation_id: int, patient_int_id: int, collected_data: dict):
+    """Inner function that performs the actual analysis with retry on rate-limit errors."""
+    max_retries = 3
+    retry_wait = 45  # seconds to wait on RESOURCE_EXHAUSTED before retrying
 
-        conversation = [
-            {"type": sms.message_type, "content": sms.content}
-            for sms in db.query(ConsultationSMS)
-                        .filter(ConsultationSMS.consultation_id == consultation_id)
-                        .all()
-        ]
+    for attempt in range(max_retries):
+        db = SessionLocal()
+        try:
+            consultation = db.query(Consultation).filter(Consultation.id == consultation_id).first()
+            if not consultation:
+                print(f"[ERROR] Consultation {consultation_id} not found in analysis thread")
+                return
 
-        analysis_input = {
-            "patient_id": string_patient_id,
-            "consultation_id": str(consultation_id),
-            "collected_data": collected_data,
-            "consultation_summary": consultation.consultation_summary,
-            "conversation": conversation
-        }
+            # Get the string patient_id (e.g. "Patient-abc123") for the tool
+            patient = db.query(PatientRegistration).filter(PatientRegistration.id == patient_int_id).first()
+            string_patient_id = patient.patient_id if patient else str(patient_int_id)
 
-        analysis_response = agent_instance.invoke(
-            {"messages": [HumanMessage(content=json.dumps(sanitize_nan(analysis_input)))]},
-            config={"configurable": {"thread_id": str(consultation_id)}}
-        )
+            # analytic_agent returns (agent, thread_id) — unpack correctly
+            agent_instance, _ = analysis_agent_class(thread_id=str(consultation_id))
 
-        raw_analysis = analysis_response["messages"][-1].content
-        analysis_json = parse_json(raw_content=raw_analysis)
+            conversation = [
+                {"type": sms.message_type, "content": sms.content}
+                for sms in db.query(ConsultationSMS)
+                            .filter(ConsultationSMS.consultation_id == consultation_id)
+                            .all()
+            ]
 
-        if isinstance(analysis_json, dict) and analysis_json:
-            analysis_record = ConsultationAnalysis(
-                consultation_id=consultation_id,
-                detected_symptoms=json.dumps(analysis_json.get("detected_symptoms", [])),
-                possible_conditions=json.dumps(analysis_json.get("possible_conditions", [])),
-                exams=json.dumps(analysis_json.get("exams", {})),
-                risk_level=analysis_json.get("risk_level", "low"),
-                mark_emergency=analysis_json.get("mark_emergency", False),
-                reasoning=analysis_json.get("reasoning", "")
+            analysis_input = {
+                "patient_id": string_patient_id,
+                "consultation_id": str(consultation_id),
+                "collected_data": collected_data,
+                "consultation_summary": consultation.consultation_summary,
+                "conversation": conversation
+            }
+
+            analysis_response = agent_instance.invoke(
+                {"messages": [HumanMessage(content=json.dumps(sanitize_nan(analysis_input)))]},
+                config={"configurable": {"thread_id": str(consultation_id)}}
             )
-            db.add(analysis_record)
-            db.commit()
-            print(f"[INFO] Analysis saved for consultation {consultation_id}")
-        else:
-            print(f"[WARN] Analysis returned empty or invalid JSON for consultation {consultation_id}")
 
-    except Exception as e:
-        print(f"[ERROR] Analysis failed for consultation {consultation_id}: {e}")
-    finally:
-        db.close()
+            raw_analysis = analysis_response["messages"][-1].content
+            analysis_json = parse_json(raw_content=raw_analysis)
+
+            if isinstance(analysis_json, dict) and analysis_json:
+                analysis_record = ConsultationAnalysis(
+                    consultation_id=consultation_id,
+                    detected_symptoms=json.dumps(analysis_json.get("detected_symptoms", [])),
+                    possible_conditions=json.dumps(analysis_json.get("possible_conditions", [])),
+                    exams=json.dumps(analysis_json.get("exams", {})),
+                    risk_level=analysis_json.get("risk_level", "low"),
+                    mark_emergency=analysis_json.get("mark_emergency", False),
+                    reasoning=analysis_json.get("reasoning", "")
+                )
+                db.add(analysis_record)
+                db.commit()
+                print(f"[INFO] Analysis saved for consultation {consultation_id}")
+            else:
+                print(f"[WARN] Analysis returned empty or invalid JSON for consultation {consultation_id}")
+            return  # success — exit retry loop
+
+        except Exception as e:
+            error_str = str(e)
+            if "RESOURCE_EXHAUSTED" in error_str and attempt < max_retries - 1:
+                wait = retry_wait * (attempt + 1)
+                print(f"[WARN] Rate limited on consultation {consultation_id} (attempt {attempt + 1}/{max_retries}), retrying in {wait}s...")
+                db.close()
+                time.sleep(wait)
+            else:
+                print(f"[ERROR] Analysis failed for consultation {consultation_id}: {e}")
+                return
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 def handle_consultation(db: Session, phone_number: str, user_input: str, thread_id: str):
