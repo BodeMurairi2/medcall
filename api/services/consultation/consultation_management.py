@@ -80,12 +80,39 @@ def trigger_analysis(consultation_id: int, patient_int_id: int, collected_data: 
         _run_analysis(consultation_id, patient_int_id, collected_data)
 
 
+def _save_fallback_analysis(consultation_id: int):
+    """Saves a placeholder analysis record when all retries are exhausted."""
+    db = SessionLocal()
+    try:
+        existing = db.query(ConsultationAnalysis).filter(
+            ConsultationAnalysis.consultation_id == consultation_id
+        ).first()
+        if existing:
+            return
+        db.add(ConsultationAnalysis(
+            consultation_id=consultation_id,
+            detected_symptoms=json.dumps([]),
+            possible_conditions=json.dumps([]),
+            exams=json.dumps({}),
+            risk_level="unknown",
+            mark_emergency=False,
+            reasoning="Doctor is currently unavailable. Come back later."
+        ))
+        db.commit()
+        print(f"[INFO] Fallback analysis saved for consultation {consultation_id}")
+    except Exception as e:
+        print(f"[ERROR] Failed to save fallback analysis for consultation {consultation_id}: {e}")
+    finally:
+        db.close()
+
+
 def _run_analysis(consultation_id: int, patient_int_id: int, collected_data: dict):
     """Inner function that performs the actual analysis with retry on rate-limit errors."""
     max_retries = 3
-    retry_wait = 45  # seconds to wait on RESOURCE_EXHAUSTED before retrying
+    base_wait = 45  # seconds; multiplied by attempt number on each retry
 
     for attempt in range(max_retries):
+        rate_limited = False
         db = SessionLocal()
         try:
             consultation = db.query(Consultation).filter(Consultation.id == consultation_id).first()
@@ -141,20 +168,20 @@ def _run_analysis(consultation_id: int, patient_int_id: int, collected_data: dic
             return  # success — exit retry loop
 
         except Exception as e:
-            error_str = str(e)
-            if "RESOURCE_EXHAUSTED" in error_str and attempt < max_retries - 1:
-                wait = retry_wait * (attempt + 1)
+            if "RESOURCE_EXHAUSTED" in str(e) and attempt < max_retries - 1:
+                rate_limited = True
+                wait = base_wait * (attempt + 1)
                 print(f"[WARN] Rate limited on consultation {consultation_id} (attempt {attempt + 1}/{max_retries}), retrying in {wait}s...")
-                db.close()
-                time.sleep(wait)
             else:
                 print(f"[ERROR] Analysis failed for consultation {consultation_id}: {e}")
+                _save_fallback_analysis(consultation_id)
                 return
         finally:
-            try:
-                db.close()
-            except Exception:
-                pass
+            # Session released here — before any sleep — so it's not held during the wait
+            db.close()
+
+        if rate_limited:
+            time.sleep(wait)
 
 
 def handle_consultation(db: Session, phone_number: str, user_input: str, thread_id: str):
