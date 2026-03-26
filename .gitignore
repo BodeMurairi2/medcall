@@ -28,3 +28,4 @@ htmlcov/
 .tox/
 alembic.ini
 .ipynb_checkpoints/
+node_modules/

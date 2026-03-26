@@ -114,6 +114,12 @@ class Consultation(Base):
         cascade="all, delete-orphan",
         uselist=False
         )
+    decision = relationship(
+        "ConsultationDecision",
+        back_populates="consultation",
+        cascade="all, delete-orphan",
+        uselist=False
+        )
 
 # Consultation SMS
 class ConsultationSMS(Base):
@@ -168,6 +174,23 @@ class ConsultationAnalysis(Base):
 
     def get_exams(self):
         return json.loads(self.exams or "{}")
+
+# Consultation Decision
+class ConsultationDecision(Base):
+    __tablename__ = "consultation_decisions"
+
+    id = Column(String, primary_key=True, default=lambda: f"decision-{generate_patient_code()}")
+    consultation_id = Column(Integer, ForeignKey("consultations.id", ondelete="CASCADE"), nullable=False, unique=True)
+
+    message = Column(Text, nullable=False)
+    urgency = Column(String, nullable=False)
+    action = Column(String, nullable=False)
+    referral_type = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    consultation = relationship("Consultation", back_populates="decision")
+
 
 # Referral
 class Referral(Base):

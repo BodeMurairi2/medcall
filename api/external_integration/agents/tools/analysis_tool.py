@@ -78,7 +78,7 @@ def load_health_dataset() -> Union[Dict[str, Any], str]:
 
     try:
         data = pd.read_csv(file_path, engine="python")
-        return data.to_dict(orient="index")
+        return data.fillna("").to_dict(orient="index")
     except Exception as error:
         return f"Error loading dataset:\n{error}"
 
@@ -96,7 +96,7 @@ def load_healthcare_diseases() -> Union[Dict[str, Any], str]:
 
     try:
         data = pd.read_csv(file_path, engine="python")
-        return data.to_dict(orient="index")
+        return data.fillna("").to_dict(orient="index")
     except Exception as error:
         return f"Error loading healthcare diseases dataset:\n{error}"
 

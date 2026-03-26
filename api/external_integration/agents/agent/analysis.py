@@ -22,6 +22,13 @@ load_dotenv()
 
 analytic_llm = ChatGoogleGenerativeAI(
     model=os.getenv("GEMINI_AI_MODEL"),
+    api_key=os.getenv("GEMINI_API_KEY_G"),
+    temperature=0,
+    max_tokens=8000
+)
+
+analysis_ll_fallback_8 = ChatGoogleGenerativeAI(
+    model=os.getenv("GEMINI_AI_MODEL"),
     api_key=os.getenv("GEMINI_API_KEY_A"),
     temperature=0,
     max_tokens=8000
@@ -84,9 +91,6 @@ tools = [
     load_health_dataset
 ]
 
-# Pre-compiled once at startup — thread isolation is handled via thread_id
-# in the config passed at invoke time, so a single shared agent + checkpointer
-# is correct and safe.
 _shared_memory = InMemorySaver()
 
 _analytic_agent = create_agent(
@@ -103,6 +107,7 @@ _analytic_agent = create_agent(
             analytic_llm_fallback_2,
             analytic_llm_fallback_3,
             analytic_llm_fallback_4,
+            analysis_ll_fallback_8
         )
     ],
     response_format=None,
