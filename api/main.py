@@ -9,9 +9,17 @@ from routes.history.history_router import router as history_router
 from routes.notifications.notifications_router import router as notifications_router
 from database.session import get_db
 
+from database.base import Base
+from database.create_session import engine
+import models.database_models  # noqa: F401 — registers all models with Base
+
 app = FastAPI(title="MedCall APIs",
               description="Telemedecine/Telehealth app using USSD and SMS",
               )
+
+@app.on_event("startup")
+def create_tables():
+    Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,
