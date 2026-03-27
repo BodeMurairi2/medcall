@@ -12,10 +12,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///medcall.db")
 if DATABASE_URL is None:
     raise ValueError("DATABASE_URL not set. Check the .env file.")
 
-# Render provides PostgreSQL URLs starting with postgres://, but SQLAlchemy
-# requires postgresql://
+# Render provides postgres:// URLs; SQLAlchemy 2.x needs postgresql+psycopg2://
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
