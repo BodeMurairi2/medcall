@@ -29,3 +29,5 @@ htmlcov/
 alembic.ini
 .ipynb_checkpoints/
 node_modules/
+.env.local
+.env.*.local
