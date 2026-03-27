@@ -26,7 +26,7 @@ build/
 .coverage.*
 htmlcov/
 .tox/
-alembic.ini
+#alembic.ini
 .ipynb_checkpoints/
 node_modules/
 .env.local

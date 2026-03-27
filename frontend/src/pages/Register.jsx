@@ -138,7 +138,7 @@ function Step1({ onDone }) {
 }
 
 // ── Step 2: Personal Info ─────────────────────────────────────────────────────
-function Step2({ onDone, onSkip }) {
+function Step2({ onDone }) {
   const [form, setForm] = useState({
     age: '', gender: '', nationality: '', country_of_residence: '', city_of_residence: '',
     address: '', next_of_kin: '', next_of_kin_phone_number: '', patient_next_relationship: '', preferred_language: ''
@@ -244,7 +244,6 @@ function Step2({ onDone, onSkip }) {
       {error && <div className="alert alert-error"><ErrIcon />{error}</div>}
 
       <div className="reg-actions">
-        <button type="button" className="btn btn-ghost" onClick={onSkip} disabled={loading}>Skip for now</button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? <><span className="spinner"/>Saving…</> : 'Save & Continue →'}
         </button>
@@ -254,7 +253,7 @@ function Step2({ onDone, onSkip }) {
 }
 
 // ── Step 3: Medical Info ──────────────────────────────────────────────────────
-function Step3({ onDone, onSkip }) {
+function Step3({ onDone }) {
   const [form, setForm] = useState({ blood_type: '', allergies: '', chronic_illness: '', recent_vaccination: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -318,7 +317,6 @@ function Step3({ onDone, onSkip }) {
       {error && <div className="alert alert-error"><ErrIcon />{error}</div>}
 
       <div className="reg-actions">
-        <button type="button" className="btn btn-ghost" onClick={onSkip} disabled={loading}>Skip for now</button>
         <button type="submit" className="btn btn-primary" disabled={loading || !form.blood_type}>
           {loading ? <><span className="spinner"/>Saving…</> : 'Complete Registration ✓'}
         </button>
@@ -341,7 +339,6 @@ export default function Register() {
   const finishStep1 = () => setStep(2)
   const finishStep2 = () => { updateUser({ hasPersonalInfo: true }); setStep(3) }
   const finishStep3 = () => { updateUser({ hasMedicalInfo: true }); navigate('/chat') }
-  const skipToChat  = () => navigate('/chat')
 
   return (
     <div className="login-container">
@@ -365,8 +362,8 @@ export default function Register() {
         </div>
 
         {step === 1 && <Step1 onDone={finishStep1} />}
-        {step === 2 && <Step2 onDone={finishStep2} onSkip={() => setStep(3)} />}
-        {step === 3 && <Step3 onDone={finishStep3} onSkip={skipToChat} />}
+        {step === 2 && <Step2 onDone={finishStep2} />}
+        {step === 3 && <Step3 onDone={finishStep3} />}
 
         {step === 1 && (
           <p className="login-footer" style={{ marginTop: 16 }}>
