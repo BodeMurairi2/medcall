@@ -24,7 +24,7 @@ function AppRoutes() {
       {/* Public pages */}
       <Route path="/"         element={<Home />} />
       <Route path="/login"    element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-      <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+      <Route path="/register" element={<Register />} />
 
       {/* Protected app shell */}
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
