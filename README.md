@@ -19,7 +19,8 @@ MedCall is an SMS/USSD and web-based telehealth platform built for East Africa. 
 - **Medical Analysis** — After the consultation, **Doctor Mjali** (the analysis agent) automatically analyses the collected symptoms, suggests possible conditions with confidence scores, flags emergencies, and recommends medical exams.
 - **Health Recommendation** — A decision agent produces a final recommendation: self-care, visit a clinic, or emergency.
 - **Consultation History** — Patients can view all past consultations, analyses, and decisions from the History tab.
-- **SMS Notifications** — Powered by Africa's Talking.
+- **Instant notification** -- Patients receive instant notifications once results are out.
+- **SMS Consultation** — Powered by Africa's Talking (Not implemented here).
 
 ---
 
