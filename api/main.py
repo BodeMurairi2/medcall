@@ -11,7 +11,7 @@ from database.session import get_db
 
 from database.base import Base
 from database.create_session import engine
-import models.database_models  # noqa: F401 — registers all models with Base
+import models.database_models
 
 app = FastAPI(title="MedCall APIs",
               description="Telemedecine/Telehealth app using USSD and SMS",
