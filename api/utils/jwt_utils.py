@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -12,15 +13,15 @@ from sqlalchemy.orm import Session
 from database.session import get_db
 from models.database_models import PatientRegistration
 
-# ── Configuration ──────────────────────────────────────────────────────────────
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "medcall-super-secret-change-in-production")
+# Configuration
+SECRET_KEY = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(64)
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7   # 7 days
+ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7
 
 _bearer = HTTPBearer(auto_error=True)
 
 
-# ── Token helpers ───────────────────────────────────────────────────────────────
+# Token helpers
 def create_access_token(patient_id: str, phone_number: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     payload = {
@@ -38,7 +39,7 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
-# ── FastAPI dependency ──────────────────────────────────────────────────────────
+# FastAPI dependency 
 def get_current_patient(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     db: Session = Depends(get_db),

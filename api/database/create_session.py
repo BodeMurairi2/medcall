@@ -12,7 +12,6 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///medcall.db")
 if DATABASE_URL is None:
     raise ValueError("DATABASE_URL not set. Check the .env file.")
 
-# Render provides postgres:// URLs; SQLAlchemy 2.x needs postgresql+psycopg2://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 elif DATABASE_URL.startswith("postgresql://"):

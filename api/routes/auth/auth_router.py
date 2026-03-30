@@ -23,7 +23,7 @@ from utils.jwt_utils import create_access_token, get_current_patient
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# ── Schemas ─────────────────────────────────────────────────────────────────────
+# Schemas
 
 class LoginRequest(BaseModel):
     phone_number: str
@@ -74,7 +74,7 @@ class MessageResponse(BaseModel):
     message: str
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────────────
+# Helpers
 
 def _hash_pin(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
@@ -101,7 +101,7 @@ def _build_token_response(patient: PatientRegistration, db: Session) -> TokenRes
     )
 
 
-# ── Endpoints ────────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
