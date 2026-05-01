@@ -31,6 +31,9 @@ app.include_router(notifications_router)
 async def root():
     return {"message": "Welcome to MedCall"}
 
+@app.get("/health")
+async def health_check():
+    return {"health_check":"successful"}
 
 if __name__ == "__main__":
     uvicorn.run(

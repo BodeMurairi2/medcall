@@ -33,7 +33,18 @@ def parse_json(raw_content: Union[str, list]) -> Union[Dict, List]:
         return sanitize_nan(parsed)
     except json.JSONDecodeError as e:
         print(f"[ERROR] Failed to parse JSON: {e}\nRaw content (first 300 chars): {cleaned[:300]}")
-        return {}
+
+    # Fallback: extract the first {...} or [...] block embedded in prose
+    for pattern in (r'\{.*\}', r'\[.*\]'):
+        match = re.search(pattern, cleaned, re.DOTALL)
+        if match:
+            try:
+                parsed = json.loads(match.group())
+                return sanitize_nan(parsed)
+            except json.JSONDecodeError:
+                pass
+
+    return {}
 
 
 def safe_json_dumps(data: Any) -> str:
